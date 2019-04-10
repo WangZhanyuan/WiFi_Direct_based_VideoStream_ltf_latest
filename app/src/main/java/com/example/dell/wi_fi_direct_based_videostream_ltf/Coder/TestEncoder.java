@@ -52,7 +52,7 @@ public class TestEncoder {
 
 
     private final static int CACHE_BUFFER_SIZE = 8;
-    private long number=1000;
+    private long number=1;
     public final static ArrayBlockingQueue<byte []> mOutputDatasQueue = new ArrayBlockingQueue<byte[]>(CACHE_BUFFER_SIZE);
     private EchoClient echoClient=new EchoClient("192.168.49.234");
 
@@ -129,6 +129,8 @@ public class TestEncoder {
         // the first picture on the player, a spare lower GOP value is suggested. But note that
         // lower GOP will produce more I frames and therefore more streaming data flow.
         softEncoder.setEncoderBitrate(bit);
+//        softEncoder.setBitrateDynamic(bit);
+//        Log.d(TAG,"这次用Dynamic初始化码率");
         softEncoder.setEncoderPreset("veryfast");
 
         softEncoder.openSoftEncoder();
@@ -206,6 +208,7 @@ public class TestEncoder {
         synchronized (TestEncoder.class) {
 //            Log.d(TAG,"start soft encoder!");
 //            if (config.orientation == Config.Orientation.HORIZONTAL) {      //水平位置不旋转
+            Log.d(TAG,"编码前数据大小:"+data.length);
                 softEncoder.NV21SoftEncode(data, mWidth, mHeight, false, 90, stamp,
                         cropX, cropY, mPushWidth, mPushHeight);
 //            } else {
@@ -243,7 +246,7 @@ public class TestEncoder {
             byte[] temp = mOutputDatasQueue.poll();
             if (temp != null && number > 0) {
                 try {
-                    number--;
+//                    number--;
                     echoClient.sendStream_n(temp, temp.length);
 //                        multicastClient.sendmessage(temp,temp.length);
 //                        echoClient2.sendStream_n(temp,temp.length);
@@ -257,7 +260,7 @@ public class TestEncoder {
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
-//                    Log.d(TAG, "编码压缩后的数据"+temp.length);
+                    Log.d(TAG, "编码后数据大小："+temp.length);
             } else {
                 //Log.d(TAG, "onOutputBufferAvailable: 发送完毕！");
             }
@@ -282,7 +285,7 @@ public class TestEncoder {
     public void changebitrate(int bit){
         if(softEncoder != null){
             softEncoder.setBitrateDynamic(bit);
-            Log.d(TAG,"调用了setBitrateDynamic，调整为" + bit);
+            Log.d(TAG,"调用了setBitrateDynamic，调整为 " + bit + " bps");
         }
     }
 

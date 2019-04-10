@@ -32,6 +32,7 @@ import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 
 import com.example.dell.wi_fi_direct_based_videostream_ltf.Coder.AsyncEncoder;
 import com.example.dell.wi_fi_direct_based_videostream_ltf.Coder.Synchronization.Decoder;
@@ -88,6 +89,9 @@ public class CameraActivity extends AppCompatActivity implements Camera.PreviewC
     private EchoServer server;
     //public static File file = new File(Environment.getExternalStorageDirectory().getAbsolutePath()+"/6.h264");
 
+
+    private EditText mBitrate;
+    private Button setBitrate;
     private static Camera mCamera = null;
     private ExecutorService executorService = Executors.newFixedThreadPool(1);
     private TestEncoder testencoder;
@@ -108,6 +112,8 @@ public class CameraActivity extends AppCompatActivity implements Camera.PreviewC
         surfaceView2=(SurfaceView)findViewById(R.id.sfvSurfaceView2);
         pill=(Button)findViewById(R.id.pipi);
 
+        mBitrate = (EditText) findViewById(R.id.et_bitrate);
+        setBitrate = (Button) findViewById(R.id.btn_bitrate);
         testencoder = new TestEncoder(640,480,2500 * 1000,30);
 
         pill.setOnClickListener(new View.OnClickListener() {
@@ -119,14 +125,13 @@ public class CameraActivity extends AppCompatActivity implements Camera.PreviewC
                try{
 
                    testencoder.stop();
-                   mCamera.release();
+                   stopCamera();
 
                    server=new EchoServer();
                    new Thread(server).start();
                    multicastServer=new MulticastServer();
                    new Thread(multicastServer).start();
                    Log.d(TAG, "onClick: 这是UDP 服务端！");
-
 
                    new Thread(new Runnable() {
                        @Override
@@ -141,12 +146,22 @@ public class CameraActivity extends AppCompatActivity implements Camera.PreviewC
                        }
                    }).start();
 
-
-
 //                    testencoder.changebitrate(4000);
+
                 }catch (Exception e){
                     e.printStackTrace();
             }
+            }
+        });
+
+        setBitrate.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v){
+                try{
+                    testencoder.changebitrate(Integer.parseInt(mBitrate.getText().toString()));
+                }catch (Exception e){
+                    e.printStackTrace();
+                }
             }
         });
 
@@ -649,4 +664,14 @@ public class CameraActivity extends AppCompatActivity implements Camera.PreviewC
         return closestRange;
     }
 
+    private void stopCamera() {
+        synchronized (Camera.class) {
+            if (mCamera != null) {
+                mCamera.setPreviewCallback(null);
+                mCamera.stopPreview();
+                mCamera.release();
+                mCamera = null;
+            }
+        }
+    }
 }
