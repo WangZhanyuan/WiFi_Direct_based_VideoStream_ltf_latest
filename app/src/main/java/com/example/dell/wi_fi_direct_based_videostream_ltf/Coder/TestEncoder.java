@@ -19,7 +19,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import com.upyun.hardware.SoftEncoder;
 
 
-public class TestEncoder {
+public class    TestEncoder {
     private final static String MINE_TYPE = MediaFormat.MIMETYPE_VIDEO_AVC;
     private static final String TAG = "TestEncoder";
     private MediaCodec mediaCodec;
@@ -237,6 +237,7 @@ public class TestEncoder {
 //            }
 //        }
 //    }
+
 
     public void onEncodedAnnexbFrame(ByteBuffer outputBuffer, MediaCodec.BufferInfo bufferInfo) {
         if(outputBuffer != null && bufferInfo.size > 0) {

@@ -35,6 +35,7 @@ import android.widget.Button;
 import android.widget.EditText;
 
 import com.example.dell.wi_fi_direct_based_videostream_ltf.Coder.AsyncEncoder;
+import com.example.dell.wi_fi_direct_based_videostream_ltf.Coder.DynamicRateEncoder;
 import com.example.dell.wi_fi_direct_based_videostream_ltf.Coder.Synchronization.Decoder;
 import com.example.dell.wi_fi_direct_based_videostream_ltf.Coder.Synchronization.Encoder;
 import com.example.dell.wi_fi_direct_based_videostream_ltf.Coder.VideoDecoder;
@@ -95,6 +96,7 @@ public class CameraActivity extends AppCompatActivity implements Camera.PreviewC
     private static Camera mCamera = null;
     private ExecutorService executorService = Executors.newFixedThreadPool(1);
     private TestEncoder testencoder;
+    private DynamicRateEncoder dynamicRateEncoder;
     private boolean usesoftencoder=true;
     private int width;
     private int height;
@@ -114,7 +116,9 @@ public class CameraActivity extends AppCompatActivity implements Camera.PreviewC
 
         mBitrate = (EditText) findViewById(R.id.et_bitrate);
         setBitrate = (Button) findViewById(R.id.btn_bitrate);
-        testencoder = new TestEncoder(640,480,2500 * 1000,30);
+//        testencoder = new TestEncoder(640,480,2500 * 1000,30);
+
+        dynamicRateEncoder = new DynamicRateEncoder(640,480,2500*1000,30);
 
         pill.setOnClickListener(new View.OnClickListener() {
             @RequiresApi(api = Build.VERSION_CODES.M)
@@ -123,8 +127,8 @@ public class CameraActivity extends AppCompatActivity implements Camera.PreviewC
                 Log.d(TAG, "onClick: 是组主么"+DeviceDetailFragment.info.isGroupOwner);
 //                if (DeviceDetailFragment.info.isGroupOwner)
                try{
-
-                   testencoder.stop();
+                   dynamicRateEncoder.stop();
+//                   testencoder.stop();
                    stopCamera();
 
                    server=new EchoServer();
@@ -158,7 +162,8 @@ public class CameraActivity extends AppCompatActivity implements Camera.PreviewC
             @Override
             public void onClick(View v){
                 try{
-                    testencoder.changebitrate(Integer.parseInt(mBitrate.getText().toString()));
+                    dynamicRateEncoder.adjustBitrate(Integer.parseInt(mBitrate.getText().toString()));
+//                    testencoder.changebitrate(Integer.parseInt(mBitrate.getText().toString()));
                 }catch (Exception e){
                     e.printStackTrace();
                 }
@@ -572,7 +577,8 @@ public class CameraActivity extends AppCompatActivity implements Camera.PreviewC
                 @Override
                 public void run() {
                     if(usesoftencoder){
-                        testencoder.fireVideo(data,stamp);
+//                        testencoder.fireVideo(data,stamp);
+                        dynamicRateEncoder.encode(data,stamp);
                     }
                 }
             });
