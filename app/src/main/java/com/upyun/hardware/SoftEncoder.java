@@ -18,14 +18,35 @@ public class SoftEncoder {
 
     private TestEncoder mTestEncoder;
     private DynamicRateEncoder mDynamicRateEncoder;
-    private int mFlag;
+    private int mCount;
+
+    private boolean isInit;
+
     public SoftEncoder(TestEncoder encoder) {
         this.mTestEncoder = encoder;
     }
     public SoftEncoder(DynamicRateEncoder encoder, int Flag){
         this.mDynamicRateEncoder = encoder;
-        this.mFlag = Flag;
+        this.mCount = Flag;
     }
+
+    public int getmCount() {
+        return mCount;
+    }
+
+    public void setInit(boolean init) {
+        isInit = init;
+    }
+
+    public boolean isInit() {
+        return isInit;
+    }
+
+    public void f(){
+        mDynamicRateEncoder.onEncodedAnnexbFrame(null,null,mCount);
+
+    }
+
 
     public native void setEncoderResolution(int outWidth, int outHeight);
     public native void setEncoderFps(int fps);
@@ -58,7 +79,7 @@ public class SoftEncoder {
         if(mTestEncoder != null){
             mTestEncoder.onEncodedAnnexbFrame(bb,vebi);
         }else if(mDynamicRateEncoder != null){
-            mDynamicRateEncoder.onEncodedAnnexbFrame(bb,vebi,mFlag);
+            mDynamicRateEncoder.onEncodedAnnexbFrame(bb,vebi,mCount);
         }
     }
 }
