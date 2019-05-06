@@ -43,7 +43,7 @@ public class    TestEncoder {
     private int mVideoTrack;
 //    private SrsFlvMuxer mflvmuxer;
     private boolean isStarted = false;
-//    private Config config;
+
 
     private SoftEncoder softEncoder;
 
@@ -112,7 +112,7 @@ public class    TestEncoder {
 
         int outHeight;
 
-//        if (config.orientation == Config.Orientation.HORIZONTAL) {
+
             outWidth = mPushWidth;
             outHeight = mPushHeight;
 
@@ -207,7 +207,6 @@ public class    TestEncoder {
         }
         synchronized (TestEncoder.class) {
 //            Log.d(TAG,"start soft encoder!");
-//            if (config.orientation == Config.Orientation.HORIZONTAL) {      //水平位置不旋转
             Log.d(TAG,"编码前数据大小:"+data.length);
                 softEncoder.NV21SoftEncode(data, mWidth, mHeight, false, 90, stamp,
                         cropX, cropY, mPushWidth, mPushHeight);

@@ -111,14 +111,14 @@ public class CameraActivity extends AppCompatActivity implements Camera.PreviewC
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_camera);
         surfaceView = (SurfaceView) findViewById(R.id.sfvSurfaceView);
-        surfaceView2=(SurfaceView)findViewById(R.id.sfvSurfaceView2);
-        pill=(Button)findViewById(R.id.pipi);
+        surfaceView2 = (SurfaceView)findViewById(R.id.sfvSurfaceView2);
+        pill = (Button)findViewById(R.id.pipi);
 
         mBitrate = (EditText) findViewById(R.id.et_bitrate);
         setBitrate = (Button) findViewById(R.id.btn_bitrate);
 //        testencoder = new TestEncoder(640,480,2500 * 1000,30);
 
-        dynamicRateEncoder = new DynamicRateEncoder(640,480,2500*1000,30);
+        dynamicRateEncoder = new DynamicRateEncoder(640,480,Integer.parseInt(mBitrate.getText().toString()),30);
 
         pill.setOnClickListener(new View.OnClickListener() {
             @RequiresApi(api = Build.VERSION_CODES.M)
@@ -130,7 +130,6 @@ public class CameraActivity extends AppCompatActivity implements Camera.PreviewC
                    dynamicRateEncoder.stop();
 //                   testencoder.stop();
                    stopCamera();
-
                    server=new EchoServer();
                    new Thread(server).start();
                    multicastServer=new MulticastServer();
@@ -142,16 +141,14 @@ public class CameraActivity extends AppCompatActivity implements Camera.PreviewC
                        public void run() {
                            if (mSurfaceHolder2.getSurface()!=null){
                                Log.d(TAG, "run: surface2"+mSurfaceHolder2.getSurface().toString());
-                           startdecode(MIME_TYPE,mSurfaceHolder2.getSurface(),640,480,server,multicastServer);
-                           Log.d(TAG, "run: 解码开始！");}
+                               startdecode(MIME_TYPE,mSurfaceHolder2.getSurface(),640,480,server,multicastServer);
+                               Log.d(TAG, "run: 解码开始！");
+                           }
                            else {
                                Log.d(TAG, "run: surface2为空无法解码！");
                            }
                        }
                    }).start();
-
-//                    testencoder.changebitrate(4000);
-
                 }catch (Exception e){
                     e.printStackTrace();
             }
@@ -468,7 +465,7 @@ public class CameraActivity extends AppCompatActivity implements Camera.PreviewC
             mCameraDevice = null;
         }
         if(mCamera != null){
-
+            stopCamera();
         }
 
     }
@@ -565,14 +562,13 @@ public class CameraActivity extends AppCompatActivity implements Camera.PreviewC
         Log.d(TAG, "initDncoder: 解码器初始化完成！");
     }
 
+    //By 4473
     @Override
     public void onPreviewFrame(final byte[] data, Camera camera) {      //使用android.hardware.Camera中的抽象接口获得相机预览的原始数据
 
         final long stamp = System.nanoTime() / 1000;
 //        Log.d(TAG, "onPreviewFrame " + stamp);
-
         synchronized (CameraActivity.class) {
-
             executorService.execute(new Runnable() {        //Java线程池
                 @Override
                 public void run() {
@@ -586,10 +582,9 @@ public class CameraActivity extends AppCompatActivity implements Camera.PreviewC
         camera.addCallbackBuffer(mYuvFrameBuffer);      //复用开辟的内存空间，提高预览效率
     }
 
+    //By 4473
     public static Camera getDefaultCamera() {
-
         synchronized (Camera.class) {
-
             // Find the total number of cameras available
             int mNumberOfCameras = Camera.getNumberOfCameras();
 
@@ -603,7 +598,6 @@ public class CameraActivity extends AppCompatActivity implements Camera.PreviewC
                     } catch (Exception e) {
                         e.printStackTrace();
                         Log.e(TAG, e.getMessage());
-
                     }
                 }
             }
@@ -611,8 +605,9 @@ public class CameraActivity extends AppCompatActivity implements Camera.PreviewC
             return null;
         }
     }
-    private void startCamera(final SurfaceHolder holder) {
 
+    //By 4473
+    private void startCamera(final SurfaceHolder holder) {
         if (mCamera == null) {
             mCamera = getDefaultCamera();
             Log.d(TAG,"getdefaultcamrea finished");
@@ -628,7 +623,6 @@ public class CameraActivity extends AppCompatActivity implements Camera.PreviewC
         Log.d(TAG,"height is "+height);
 
         mYuvFrameBuffer = new byte[width * height * 3 / 2];
-
 
         if (mCamera != null) {
             Camera.Parameters parameters = mCamera.getParameters();
@@ -654,6 +648,7 @@ public class CameraActivity extends AppCompatActivity implements Camera.PreviewC
         }
 
     }
+    //By 4473
     private int[] findClosestFpsRange(int expectedFps, List<int[]> fpsRanges) {
         expectedFps *= 1000;
         int[] closestRange = fpsRanges.get(0);
@@ -670,6 +665,7 @@ public class CameraActivity extends AppCompatActivity implements Camera.PreviewC
         return closestRange;
     }
 
+    //By 4473
     private void stopCamera() {
         synchronized (Camera.class) {
             if (mCamera != null) {

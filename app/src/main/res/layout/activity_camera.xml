@@ -37,7 +37,7 @@
         android:id="@+id/t_bitrate"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="码率" />
+        android:text="码率(单位kbps)" />
 
     <EditText
         android:id="@+id/et_bitrate"
@@ -47,7 +47,7 @@
         android:ems="10"
         android:hint="请输入比特率"
         android:inputType="number"
-        android:text="2500000" />
+        android:text="4000" />
 
     <Button
         android:id="@+id/btn_bitrate"
