@@ -3,7 +3,7 @@ package com.upyun.hardware;
 import android.media.MediaCodec;
 import android.os.Build;
 
-import com.example.dell.wi_fi_direct_based_videostream_ltf.Coder.DynamicRateEncoder;
+import com.example.dell.wi_fi_direct_based_videostream_ltf.Coder.RateAdaptiveEncoder;
 import com.example.dell.wi_fi_direct_based_videostream_ltf.Coder.TestEncoder;
 
 import java.nio.ByteBuffer;
@@ -17,15 +17,15 @@ public class SoftEncoder {
     }
 
     private TestEncoder mTestEncoder;
-    private DynamicRateEncoder mDynamicRateEncoder;
+    private RateAdaptiveEncoder mRateAdaptiveEncoder;
 //    private int mCount;
     private boolean isInit = false;
 
     public SoftEncoder(TestEncoder encoder) {
         this.mTestEncoder = encoder;
     }
-    public SoftEncoder(DynamicRateEncoder encoder){
-        this.mDynamicRateEncoder = encoder;
+    public SoftEncoder(RateAdaptiveEncoder encoder){
+        this.mRateAdaptiveEncoder = encoder;
     }
 
 //    public int getmCount() {
@@ -72,8 +72,8 @@ public class SoftEncoder {
 
         if(mTestEncoder != null){
             mTestEncoder.onEncodedAnnexbFrame(bb,vebi);
-        }else if(mDynamicRateEncoder != null){
-            mDynamicRateEncoder.onEncodedAnnexbFrame(bb,vebi);
+        }else if(mRateAdaptiveEncoder != null){
+            mRateAdaptiveEncoder.onEncodedAnnexbFrame(bb,vebi);
         }
     }
 }

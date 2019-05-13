@@ -1,6 +1,7 @@
 package com.example.dell.wi_fi_direct_based_videostream_ltf.Coder;
 
 import com.example.dell.wi_fi_direct_based_videostream_ltf.UDP.EchoClient;
+import com.example.dell.wi_fi_direct_based_videostream_ltf.Cache.ServerCache;
 import com.upyun.hardware.SoftEncoder;
 
 import java.io.IOException;
@@ -13,8 +14,8 @@ import java.util.concurrent.ArrayBlockingQueue;
 import android.media.MediaCodec;
 import android.util.Log;
 
-public class DynamicRateEncoder {
-    private static final String TAG = "DynamicRateEncoder";
+public class RateAdaptiveEncoder {
+    private static final String TAG = "RateAdaptiveEncoder";
 
     private int mWidth;
     private int mHeight;
@@ -28,11 +29,14 @@ public class DynamicRateEncoder {
     private EchoClient echoClient;
 
     private HashMap<Integer ,SoftEncoder> mEncoderHashmap = new HashMap<>();
-//    private int mCount;
+    private int timeStamp = 0;
 //    private ArrayList<SoftEncoder> mEncoderList = new ArrayList<>();
 
+    private ServerCache serverCache = new ServerCache(100, 2000);
+
+
     //构造方法,比特率单位为kbps
-    public DynamicRateEncoder(int width, int height, int bitrate, int fps){
+    public RateAdaptiveEncoder(int width, int height, int bitrate, int fps){
         mWidth = width;
         mHeight = height;
         mBitrate = bitrate;
@@ -109,7 +113,8 @@ public class DynamicRateEncoder {
 
     //尝试过关闭编码器，但一直崩溃，出现signal 11错误，怀疑jni写的有问题，干脆不关了
     public void onEncodedAnnexbFrame(ByteBuffer outputBuffer, MediaCodec.BufferInfo bufferInfo) {
-        sendByEchoClient(outputBuffer, bufferInfo);
+        serverCache.put(timeStamp++, outputBuffer);
+//        sendByEchoClient(outputBuffer, bufferInfo);
 //        if (count < mCount){
 ////            Log.d(TAG,"无脑入队ojbk!"+count);
 ////        }
@@ -131,7 +136,7 @@ public class DynamicRateEncoder {
 //
 //
 ////        if(count == mCount - 1 && ){
-////            synchronized (DynamicRateEncoder.class) {
+////            synchronized (RateAdaptiveEncoder.class) {
 ////                for (SoftEncoder mEncoder : mEncoderList) {
 ////                    if (mEncoder.getmCount() != count) {
 ////                        mEncoder.closeSoftEncoder();
@@ -207,7 +212,6 @@ public class DynamicRateEncoder {
     public void stop() {
         for (SoftEncoder mSoftEncoder : mEncoderHashmap.values()){
             if (mSoftEncoder != null){
-                //默认竖直方向，旋转90°
                 mSoftEncoder.closeSoftEncoder();
             }
         }

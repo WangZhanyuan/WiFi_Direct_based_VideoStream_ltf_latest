@@ -73,9 +73,8 @@ public class EchoClient {
 
         }
     }
-    public void sendStream_n (byte[]buf,int length)throws IOException {
+    public void sendStream_n (byte[] buf,int length)throws IOException {
 //        Log.d(TAG, "echoclient: 我想看看这是谁的IP"+getIP());
-
         DatagramPacket datagramPacket=new DatagramPacket(buf,length,address,4448);
         socket.send(datagramPacket);
     }

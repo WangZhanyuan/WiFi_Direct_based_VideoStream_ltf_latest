@@ -46,7 +46,8 @@ public class VideoDecoder {
             byte [] dataSources = null;
 //            if(true) {
 //                dataSources = mVideoEncoder.pollFrameFromEncoder();
-                dataSources=echoServer.pollFramedata();
+            byte[] tempData = echoServer.pollFramedata();
+            System.arraycopy(tempData,4,dataSources,0,tempData.length-4);
 //            dataSources=multicastServer.pollFramedata();
 //                if (dataSources!=null)
 //                Log.d(TAG, "onInputBufferAvailable: 解码器缓冲区可以用了！"+Arrays.toString(dataSources));
@@ -135,7 +136,7 @@ public class VideoDecoder {
                 mMediaCodec.configure(mMediaFormat, mSurface,null,0);
                 Log.d(TAG,"MediaFormat:" + mMediaFormat.toString());
                 mMediaCodec.start();
-                Log.d(TAG,"Mediacodec Start By Baymax");
+//                Log.d(TAG,"Mediacodec Start By Baymax");
             }catch (Exception e){
                 e.printStackTrace();
             }
