@@ -59,7 +59,7 @@ public class EchoServer implements Runnable {
                 Log.d(TAG, " "+packet_number+"runEchoServer: "+Arrays.toString(packet.getData()));
 //                echoClient_multist.sendStream_n(packet.getData(),packet.getData().length);
                 byte[]temp=new byte[packet.getLength()];
-                System.arraycopy(packet.getData(),0,temp,0,packet.getLength());
+                System.arraycopy(packet.getData(),0,temp,0,(packet.getLength()-4));
                 mInputDataQueue.offer(temp);
                 //测试丢包专用
 //                    Log.d(TAG, "run: 接收到了"+packet_number);

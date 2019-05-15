@@ -10,6 +10,7 @@ import android.support.annotation.RequiresApi;
 import android.util.Log;
 import android.view.Surface;
 
+import com.example.dell.wi_fi_direct_based_videostream_ltf.Cache.ClientCache;
 import com.example.dell.wi_fi_direct_based_videostream_ltf.Multicast.MulticastServer;
 import com.example.dell.wi_fi_direct_based_videostream_ltf.UDP.EchoServer;
 import com.example.dell.wi_fi_direct_based_videostream_ltf.Multicast.MulticastClient;
@@ -36,6 +37,7 @@ public class VideoDecoder {
     private HandlerThread mVideoDecoderHandlerThread = new HandlerThread("VideoDecoder");
     private EchoServer echoServer;
     private MulticastServer multicastServer;
+    private ClientCache clientCache = new ClientCache(100);
 
     private MediaCodec.Callback mCallback = new MediaCodec.Callback() {
         @Override
@@ -44,10 +46,12 @@ public class VideoDecoder {
             inputBuffer.clear();
 
             byte [] dataSources = null;
+            dataSources = clientCache.get();
 //            if(true) {
 //                dataSources = mVideoEncoder.pollFrameFromEncoder();
-            byte[] tempData = echoServer.pollFramedata();
-            System.arraycopy(tempData,4,dataSources,0,tempData.length-4);
+//            byte[] tempData = echoServer.pollFramedata();
+//            System.arraycopy(tempData,4,dataSources,0,tempData.length-4);
+//            dataSources=echoServer.pollFramedata();
 //            dataSources=multicastServer.pollFramedata();
 //                if (dataSources!=null)
 //                Log.d(TAG, "onInputBufferAvailable: 解码器缓冲区可以用了！"+Arrays.toString(dataSources));
@@ -124,8 +128,9 @@ public class VideoDecoder {
     }
 
     public void setechoServer(EchoServer echoServer,MulticastServer multicastServer){
-        this.echoServer=echoServer;
-        this.multicastServer=multicastServer;
+        clientCache.setechoServer(echoServer, multicastServer);
+//        this.echoServer=echoServer;
+//        this.multicastServer=multicastServer;
     }
 
     @RequiresApi(api = Build.VERSION_CODES.M)

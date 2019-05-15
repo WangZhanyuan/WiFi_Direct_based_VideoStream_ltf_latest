@@ -7,25 +7,23 @@ import android.util.Log;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class ServerCache {
     private static final String TAG = "ServerCache";
-    private ConcurrentHashMap<Integer, ByteBuffer> sCache = new ConcurrentHashMap<>();
-    private int cacheSize;//ServerCache中存放的数据包个数，根据Log来看每秒大概15个包左右
+    private ConcurrentHashMap<Integer, ByteBuffer> sCache = new ConcurrentHashMap<>();//神奇嗷，ConcurrentHashMap就好用了嗷
+    private int sCacheSize;//ServerCache中存放的数据包个数，根据Log来看每秒大概15个包左右
     private long cycleTime;//删除过期数据的周期,单位ms
     private EchoClient client = new EchoClient("192.168.49.234");
-
 
     //倒计时类，间隔countDownInterval调用onTick方法，计时cycleTime/countDownInterval秒后调用onFinish方法
     private CountDownTimer countDownTimer ;
 
     //构造方法
-    public ServerCache (int cacheSize, long cycleTime) {
-        setCacheSize(cacheSize);
+    public ServerCache (int sCacheSize, long cycleTime) {
+        setsCacheSize(sCacheSize);
         setCycleTime(cycleTime);
         Log.d(TAG, "ServerCache: ServerCache is starting");
         countDownTimer= new CountDownTimer(cycleTime,1000) {
@@ -44,13 +42,13 @@ public class ServerCache {
         Log.d(TAG,"CountDownTimer Start");
     }
 
-    public void setCacheSize (int size) { this.cacheSize = size; }
+    public void setsCacheSize (int size) { this.sCacheSize = size; }
     public void setCycleTime (long time) { this.cycleTime = time; }
 
     //每一次put，先发送过去，再放到sCache备份，以便丢包后请求
-    public void put (int stamp, ByteBuffer buffer) {
-        sendByEchoClient(stamp, buffer);
-        sCache.put(stamp, buffer);
+    public void put (int timeStamp, ByteBuffer buffer) {
+        sendByEchoClient(timeStamp, buffer);
+        sCache.put(timeStamp, buffer);
         Log.d(TAG,"sCache size : "+sCache.size());
     }
 
@@ -67,7 +65,7 @@ public class ServerCache {
         }
         Log.d(TAG, "deleteStaleData: stamp "+maxStamp);
         Log.d(TAG, "deleteStaleData: deleteStaleData is running");
-        //遍历sCache，删除间隔大于cacheSize的元素
+        //遍历sCache，删除间隔大于sCacheSize的元素
         Iterator<Map.Entry<Integer, ByteBuffer>> iter = sCache.entrySet().iterator();
         Log.d(TAG, "deleteStaleData: Iterator init");
         while (iter.hasNext()) {
@@ -76,9 +74,9 @@ public class ServerCache {
             Log.d(TAG, "deleteStaleData: iter.next");
             Log.d(TAG, "deleteStaleData: entry.getKey"+entry.getKey());
             Log.d(TAG, "deleteStaleData: maxStamp"+maxStamp);
-            Log.d(TAG, "deleteStaleData: cacheSize"+cacheSize);
-            if (maxStamp - entry.getKey() > cacheSize) {
-                Log.d(TAG, "deleteStaleData: >cachesize");
+            Log.d(TAG, "deleteStaleData: sCacheSize"+sCacheSize);
+            if (maxStamp - entry.getKey() > sCacheSize) {
+                Log.d(TAG, "deleteStaleData: >sCacheSize");
                 iter.remove();
                 Log.d(TAG, "deleteStaleData: data is deleted");
             }
