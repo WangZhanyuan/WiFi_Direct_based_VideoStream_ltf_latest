@@ -1,5 +1,6 @@
 package com.example.dell.wi_fi_direct_based_videostream_ltf.Cache;
 
+import com.example.dell.wi_fi_direct_based_videostream_ltf.Coder.RateAdaptiveEncoder;
 import com.example.dell.wi_fi_direct_based_videostream_ltf.UDP.EchoClient;
 
 import android.os.CountDownTimer;
@@ -7,116 +8,233 @@ import android.util.Log;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class ServerCache {
     private static final String TAG = "ServerCache";
-    private ConcurrentHashMap<Integer, ByteBuffer> sCache = new ConcurrentHashMap<>();//神奇嗷，ConcurrentHashMap就好用了嗷
     private int sCacheSize;//ServerCache中存放的数据包个数，根据Log来看每秒大概15个包左右
-    private long cycleTime;//删除过期数据的周期,单位ms
+    private int timeStamp;//时间戳，存在溢出风险，以后再写怎么处理
+    private int mBitrate;//测试用，仅用来测试从哪个缓冲区发送的数据
+    private boolean isActive;
+    private boolean needSPS_PPS;
+    private byte[] sps_pps_sei;
+    private byte[] sei;
+    private RateAdaptiveEncoder rateAdaptiveEncoder;
+    private ConcurrentHashMap<Integer, byte[]> sCache = new ConcurrentHashMap<>();//神奇嗷，ConcurrentHashMap就好用了嗷
     private EchoClient client = new EchoClient("192.168.49.234");
 
     //倒计时类，间隔countDownInterval调用onTick方法，计时cycleTime/countDownInterval秒后调用onFinish方法
     private CountDownTimer countDownTimer ;
 
     //构造方法
-    public ServerCache (int sCacheSize, long cycleTime) {
-        setsCacheSize(sCacheSize);
-        setCycleTime(cycleTime);
-        Log.d(TAG, "ServerCache: ServerCache is starting");
+    public ServerCache (int sCacheSize, long cycleTime, int mBitrate, RateAdaptiveEncoder rateAdaptiveEncoder) {
+        this.sCacheSize = sCacheSize;
         countDownTimer= new CountDownTimer(cycleTime,1000) {
             @Override
-            public void onTick(long millisUntilFinished) {
-                Log.d(TAG,"onTick");
-            }
+            public void onTick(long millisUntilFinished) {}
 
             @Override
             public void onFinish() {
                 //倒计时结束的操作
-            deleteStaleData();
-            this.start();
+                deleteStaleData();
+                this.start();
             }
         }.start();
-        Log.d(TAG,"CountDownTimer Start");
+        this.mBitrate = mBitrate;
+        this.needSPS_PPS = false;
+        this.rateAdaptiveEncoder = rateAdaptiveEncoder;
     }
 
-    public void setsCacheSize (int size) { this.sCacheSize = size; }
-    public void setCycleTime (long time) { this.cycleTime = time; }
-
-    //每一次put，先发送过去，再放到sCache备份，以便丢包后请求
-    public void put (int timeStamp, ByteBuffer buffer) {
-        sendByEchoClient(timeStamp, buffer);
-        sCache.put(timeStamp, buffer);
-        Log.d(TAG,"sCache size : "+sCache.size());
-    }
-
-    //请求发送对应时间戳的数据
-    public void get (int stamp) {
-        sendByEchoClient(stamp, sCache.get(stamp));
-    }
-
-    public void deleteStaleData () {
-        //遍历找到最大的key
-        int maxStamp = 0;
-        for (int tempStamp : sCache.keySet()) {
-                maxStamp = tempStamp > maxStamp ? tempStamp : maxStamp;
+    public void put (byte[] data) {
+        Log.d(TAG, "put: I wanna see this frame : " + Arrays.toString(data));
+        if (sps_pps_sei == null) {
+            Log.d(TAG, "put: I will record SPS_PPS");
+            if (!getSPS_PPS_SEI(data)) {
+                sps_pps_sei = getSPS_PPS_SEIFromDefaultCache();
+            }
+            sCache.put(timeStamp++, sps_pps_sei);
         }
-        Log.d(TAG, "deleteStaleData: stamp "+maxStamp);
-        Log.d(TAG, "deleteStaleData: deleteStaleData is running");
-        //遍历sCache，删除间隔大于sCacheSize的元素
-        Iterator<Map.Entry<Integer, ByteBuffer>> iter = sCache.entrySet().iterator();
-        Log.d(TAG, "deleteStaleData: Iterator init");
-        while (iter.hasNext()) {
-            Log.d(TAG, "deleteStaleData: iter.hasnext");
-            Map.Entry<Integer, ByteBuffer> entry =  iter.next();
-            Log.d(TAG, "deleteStaleData: iter.next");
-            Log.d(TAG, "deleteStaleData: entry.getKey"+entry.getKey());
-            Log.d(TAG, "deleteStaleData: maxStamp"+maxStamp);
-            Log.d(TAG, "deleteStaleData: sCacheSize"+sCacheSize);
-            if (maxStamp - entry.getKey() > sCacheSize) {
-                Log.d(TAG, "deleteStaleData: >sCacheSize");
-                iter.remove();
-                Log.d(TAG, "deleteStaleData: data is deleted");
+        if (needSPS_PPS) {
+            if (!isIDRFrame(data)) {
+                return;
+            } else {
+                needSPS_PPS = false;
+                sCache.put(timeStamp++, data);
+            }
+        } else {
+            sCache.put(timeStamp++, data);
+        }
+//        sCache.put(timeStamp++, data);
+        if (isActive){
+//            if (needSPS_PPS) {
+//                send(timeStamp - sCacheSize, true);
+//            } else {
+                send(timeStamp - sCacheSize, false);
+//            }
+        }
+//        Log.d(TAG, "put: bitrate : "+mBitrate+" data length : "+data.length);
+    }
+
+    private byte[] getSPS_PPS_SEIFromDefaultCache() {
+        return rateAdaptiveEncoder.getSPS_PPS_SEIFromDefaultCache();
+    }
+
+    public byte[] getThisSPS_PPS_SEI() {
+        if (sps_pps_sei != null) {
+            Log.d(TAG, "getThisSPS_PPS: I Have SPS_PPS");
+            return sps_pps_sei;
+        } else {
+            Log.e(TAG, "getThisSPS_PPS: I Don't have SPS_PPS");
+            return null;
+        }
+    }
+
+    public int getmBitrate() {
+        return mBitrate;
+    }
+
+    private boolean getSPS_PPS_SEI(byte[] data) {
+        int start = 0;
+        int end = 0;
+        boolean hasSPS_PPS = false;
+        for (int i = 0; !hasSPS_PPS; i++) {
+            if (data[i] == 0x00 && data[i + 1] == 0x00 && data[i + 2] == 0x01) {
+                if ((data[i + 3] & 0x1f) == 7) {
+                    if (!hasSPS_PPS) {
+                        start = i;
+                        i += 2;
+                    } else {
+                        Log.e(TAG, "getSps_Pps: already has SPS_PPS");
+                    }
+                } else if ((data[i + 3] & 0x1f) != 8) {
+                    end = i - 1;
+                    hasSPS_PPS = true;
+                }
+            } else if (data[i] == 0x00 && data[i + 1] == 0x00 && data[i + 2] == 0x00 && data[i + 3] == 0x01) {
+                if ((data[i + 4] & 0x1f) == 7) {
+                    if (!hasSPS_PPS) {
+                        start = i;
+                        i += 3;
+                    } else {
+                        Log.e(TAG, "getSps_Pps: already has SPS_PPS");
+                    }
+                } else if ((data[i + 4] & 0x1f) != 8) {
+                    end = i - 1;
+                    hasSPS_PPS = true;
+                }
             }
         }
+        if (start < end) {
+            Log.d(TAG, "getSps_Pps: strat : " + start + " end : " + end);
+            sps_pps_sei = new byte[data.length];
+            System.arraycopy(data, 0, sps_pps_sei, 0, data.length);
+//            sei = new byte[data.length - (end - start + 1)];
+//            System.arraycopy(data, end + 1, sei, 0, data.length - (end - start + 1));
+            Log.d(TAG, "getSps_Pps: bitrate : " + mBitrate + " res : " + Arrays.toString(sps_pps_sei));
+            Log.d(TAG, "getSps_Pps: data : " + Arrays.toString(data));
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+
+    private boolean isIDRFrame (byte[] data) {
+        for (int i = 0;;i++){
+            if (data[i] == 0x00 && data[i + 1] == 0x00 && data[i + 2] == 0x01) {
+                return (data[i + 3] & 0x1f) == 5;
+            } else if (data[i] == 0x00 && data[i + 1] == 0x00 && data[i + 2] == 0x00 && data[i + 3] == 0x01) {
+                return (data[i + 4] & 0x1f) == 5;
+            }
+        }
+    }
+
+    public void setActive(boolean active) {
+        isActive = active;
+    }
+
+    public void setNeedSPS_PPS(boolean needSPS_PPS) {
+        this.needSPS_PPS = needSPS_PPS;
+    }
+
+    //发送对应时间戳的数据
+    private void send (int stamp, boolean needSPS) {
+        if (sCache.get(stamp) != null) {
+            sendByEchoClient(stamp, sCache.get(stamp), needSPS);
+        }
+//        Log.d(TAG, "send: send");
+    }
+
+    //删除过期数据
+    private void deleteStaleData () {
+        int key = timeStamp;
+        //遍历sCache，删除间隔大于sCacheSize的元素
+        Iterator<Map.Entry<Integer, byte[]>> iter = sCache.entrySet().iterator();
+        while (iter.hasNext()) {
+            Map.Entry<Integer, byte[]> entry =  iter.next();
+            if (key - entry.getKey() > sCacheSize) {
+                iter.remove();
+            }
+        }
+//        Log.d(TAG, "deleteStaleData: bitrate : "+mBitrate+" cachesize : "+sCache.size());
     }
 
     //发送数据
-    public void sendByEchoClient (int stamp, ByteBuffer buffer) {
-        if (buffer != null) {
-            byte[] data = generateUDPMessage(stamp, decodeValue(buffer));
-            try {
-                client.sendStream_n(data, data.length);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+    private void sendByEchoClient (int stamp, byte[] data, boolean needSPS) {
+//        if (isIDRFrame(data) && needSPS) {
+//            byte[] extraMessage = new byte[sps_pps_sei.length + sei.length + 4];
+//            System.arraycopy(sps_pps, 0, extraMessage, 4, sps_pps.length);
+//            System.arraycopy(sei, 0, extraMessage, sps_pps.length + 4, sei.length);
+//            try {
+//                client.sendStream_n(extraMessage, extraMessage.length);
+//                Log.d(TAG, "sendByEchoClient: I have send sps_pps & sei : "+Arrays.toString(extraMessage));
+//            } catch (IOException e) {
+//                e.printStackTrace();
+//            }
+//        }
+        byte[] message = generateUDPMessage(stamp, data);
+        try {
+            client.sendStream_n(message, message.length);
+            Log.d(TAG, "sendByEchoClient: let me see the udp message : "+Arrays.toString(message));
+//                Log.d(TAG, "sendByEchoClient: data length : "+data.length);
+//                Log.d(TAG, "sendByEchoClient: bitrate : "+mBitrate);
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
-    //ByteBuffer转Byte[]
-    public byte[] decodeValue(ByteBuffer buffer) {
-        int len = buffer.limit() - buffer.position();
-        byte[] data = new byte[len];
-        buffer.get(data);
-        return data;
-    }
-
     //将时间戳与编码结果打包，相应地，需要接收端解包
-    public byte[] generateUDPMessage (int stamp, byte[] data) {
+    private byte[] generateUDPMessage (int stamp, byte[] data) {
         byte[] message = new byte[4 + data.length];
         System.arraycopy(int2ByteArray(stamp), 0, message, 0, 4);
         System.arraycopy(data, 0, message, 4, data.length);
         return message;
     }
 
-    public static byte[] int2ByteArray(int i){
+    //ByteBuffer转Byte[]
+    private byte[] decodeValue(ByteBuffer buffer) {
+        int len = buffer.limit() - buffer.position();
+        byte[] data = new byte[len];
+        buffer.get(data);
+        return data;
+    }
+
+    //int转byte[]
+    private static byte[] int2ByteArray(int i){
         byte[] result=new byte[4];
         result[0]=(byte)((i >> 24)& 0xFF);
         result[1]=(byte)((i >> 16)& 0xFF);
         result[2]=(byte)((i >> 8)& 0xFF);
         result[3]=(byte)(i & 0xFF);
         return result;
+    }
+
+    public void close() {
+        countDownTimer.cancel();
+        sCache.clear();
+        Log.d(TAG, "close: cancel");
     }
 }

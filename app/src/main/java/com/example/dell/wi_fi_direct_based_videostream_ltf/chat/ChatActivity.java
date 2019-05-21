@@ -43,6 +43,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.dell.wi_fi_direct_based_videostream_ltf.Camera.CameraActivity;
+import com.example.dell.wi_fi_direct_based_videostream_ltf.Camera.Decoder;
 import com.example.dell.wi_fi_direct_based_videostream_ltf.R;
 import com.example.dell.wi_fi_direct_based_videostream_ltf.Service.ServerAsyncTask;
 import com.example.dell.wi_fi_direct_based_videostream_ltf.Service.ClientAsynTask;
@@ -78,7 +79,8 @@ public class ChatActivity extends AppCompatActivity {
     private Button play;
     private Button pause;
     private Button stop;
-    private Button replay;
+    private Button encode;
+    private Button decode;
     private Button btn_sedm;
     private Thread thread;
     private CameraDevice camera;
@@ -170,13 +172,16 @@ public class ChatActivity extends AppCompatActivity {
         play=(Button) findViewById(R.id.btn_play);
         pause=(Button)findViewById(R.id.btn_pause);
         stop=(Button)findViewById(R.id.btn_stop);
-        replay=(Button)findViewById(R.id.btn_replay);
+        encode=(Button)findViewById(R.id.btn_encode);
+        decode=(Button)findViewById(R.id.btn_decode) ;
+
         btn_sedm=(Button)findViewById(R.id.btn_send);
 
         play.setOnClickListener(click);
         pause.setOnClickListener(click);
         stop.setOnClickListener(click);
-        replay.setOnClickListener(click);
+        encode.setOnClickListener(click);
+        decode.setOnClickListener(click);
         //btn_sedm.setOnClickListener(click);
         sv.getHolder().addCallback(callback2);
         seekBar.setOnSeekBarChangeListener(change);
@@ -355,10 +360,14 @@ public class ChatActivity extends AppCompatActivity {
         public void onClick(View v) {
 
                 switch (v.getId()){
-                    case R.id.btn_replay:
+                    case R.id.btn_encode:
                         //replay();
                         Intent intent=new Intent(ChatActivity.this, CameraActivity.class);
                         startActivity(intent);
+                        break;
+                    case R.id.btn_decode:
+                        Intent intent1 = new Intent(ChatActivity.this, Decoder.class);
+                        startActivity(intent1);
                         break;
                     case R.id.btn_play:
                         play(0);

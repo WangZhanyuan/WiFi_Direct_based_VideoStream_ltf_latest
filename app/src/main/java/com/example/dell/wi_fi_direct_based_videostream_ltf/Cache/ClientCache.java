@@ -35,8 +35,7 @@ public class ClientCache {
 
     //获取缓冲区末的数据,并删除
     public byte[] get () {
-        byte[] res = null;
-        res = cCache.get(minStamp);
+        byte[] res = cCache.get(minStamp);
         cCache.remove(minStamp++);
         return res;
     }
@@ -80,8 +79,8 @@ public class ClientCache {
     private class Thread extends java.lang.Thread{
         @Override
         public void run(){
-            byte[] message = null;
-            if ((message = echoServer.pollFramedata()) != null){
+            byte[] message = echoServer.pollFramedata();
+            if (message != null){
                 Data res = decodeUDPMessage(message);
                 if (checkPacket(res.getTimeStamp())){
                     //没有丢包

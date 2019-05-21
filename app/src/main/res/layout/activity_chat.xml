@@ -60,12 +60,20 @@
                 tools:ignore="ButtonStyle" />
 
             <Button
-                android:id="@+id/btn_replay"
+                android:id="@+id/btn_encode"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="@string/Replay"
+                android:text="@string/Encode"
                 tools:ignore="ButtonStyle" />
+            <Button
+                android:id="@+id/btn_decode"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/Decode"
+                tools:ignore="ButtonStyle" />
+
 
         </LinearLayout>
     </LinearLayout>

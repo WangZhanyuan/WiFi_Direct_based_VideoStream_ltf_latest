@@ -44,8 +44,6 @@ import com.example.dell.wi_fi_direct_based_videostream_ltf.R;
 import com.example.dell.wi_fi_direct_based_videostream_ltf.UDP.EchoServer;
 import com.example.dell.wi_fi_direct_based_videostream_ltf.wifi_direct.DeviceDetailFragment;
 
-import com.example.dell.wi_fi_direct_based_videostream_ltf.Coder.TestEncoder;
-
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -95,7 +93,6 @@ public class CameraActivity extends AppCompatActivity implements Camera.PreviewC
     private Button setBitrate;
     private static Camera mCamera = null;
     private ExecutorService executorService = Executors.newFixedThreadPool(1);
-    private TestEncoder testencoder;
     private RateAdaptiveEncoder rateAdaptiveEncoder;
     private boolean usesoftencoder=true;
     private int width;
@@ -116,7 +113,6 @@ public class CameraActivity extends AppCompatActivity implements Camera.PreviewC
 
         mBitrate = (EditText) findViewById(R.id.et_bitrate);
         setBitrate = (Button) findViewById(R.id.btn_bitrate);
-//        testencoder = new TestEncoder(640,480,2500 * 1000,30);
 
         rateAdaptiveEncoder = new RateAdaptiveEncoder(640,480,Integer.parseInt(mBitrate.getText().toString()),30);
 
@@ -149,9 +145,9 @@ public class CameraActivity extends AppCompatActivity implements Camera.PreviewC
                            }
                        }
                    }).start();
-                }catch (Exception e){
-                    e.printStackTrace();
-            }
+               }catch (Exception e){
+                   e.printStackTrace();
+               }
             }
         });
 

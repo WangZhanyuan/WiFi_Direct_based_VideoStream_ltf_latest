@@ -10,7 +10,7 @@ import android.support.annotation.RequiresApi;
 import android.util.Log;
 import android.view.Surface;
 
-import com.example.dell.wi_fi_direct_based_videostream_ltf.Cache.ClientCache;
+//import com.example.dell.wi_fi_direct_based_videostream_ltf.Cache.ClientCache;
 import com.example.dell.wi_fi_direct_based_videostream_ltf.Multicast.MulticastServer;
 import com.example.dell.wi_fi_direct_based_videostream_ltf.UDP.EchoServer;
 import com.example.dell.wi_fi_direct_based_videostream_ltf.Multicast.MulticastClient;
@@ -37,7 +37,7 @@ public class VideoDecoder {
     private HandlerThread mVideoDecoderHandlerThread = new HandlerThread("VideoDecoder");
     private EchoServer echoServer;
     private MulticastServer multicastServer;
-    private ClientCache clientCache = new ClientCache(100);
+//    private ClientCache clientCache = new ClientCache(100);
 
     private MediaCodec.Callback mCallback = new MediaCodec.Callback() {
         @Override
@@ -46,11 +46,15 @@ public class VideoDecoder {
             inputBuffer.clear();
 
             byte [] dataSources = null;
-            dataSources = clientCache.get();
+//            dataSources = clientCache.get();
 //            if(true) {
 //                dataSources = mVideoEncoder.pollFrameFromEncoder();
-//            byte[] tempData = echoServer.pollFramedata();
-//            System.arraycopy(tempData,4,dataSources,0,tempData.length-4);
+            byte[] tempData = echoServer.pollFramedata();
+            if (tempData != null) {
+                byte[] data = new byte[tempData.length-4];
+                System.arraycopy(tempData, 4, data , 0, tempData.length - 4);
+                dataSources = data;
+            }
 //            dataSources=echoServer.pollFramedata();
 //            dataSources=multicastServer.pollFramedata();
 //                if (dataSources!=null)
@@ -111,8 +115,7 @@ public class VideoDecoder {
         this.mViewHeight = viewheight;
         this.mSurface = surface;
 
-        mVideoDecoderHandlerThread.start();
-        mVideoDecoderHandler = new Handler(mVideoDecoderHandlerThread.getLooper());
+
 
         mMediaFormat = MediaFormat.createVideoFormat(mimeType, mViewWidth, mViewHeight);
         mMediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Flexible);
@@ -128,13 +131,15 @@ public class VideoDecoder {
     }
 
     public void setechoServer(EchoServer echoServer,MulticastServer multicastServer){
-        clientCache.setechoServer(echoServer, multicastServer);
-//        this.echoServer=echoServer;
-//        this.multicastServer=multicastServer;
+//        clientCache.setechoServer(echoServer, multicastServer);
+        this.echoServer=echoServer;
+        this.multicastServer=multicastServer;
     }
 
     @RequiresApi(api = Build.VERSION_CODES.M)
     public void startDecoder(){
+        mVideoDecoderHandlerThread.start();
+        mVideoDecoderHandler = new Handler(mVideoDecoderHandlerThread.getLooper());
         if(mMediaCodec != null && mSurface != null){
             try{
                 mMediaCodec.setCallback(mCallback, mVideoDecoderHandler);
@@ -163,6 +168,13 @@ public class VideoDecoder {
         if(mMediaCodec != null){
             mMediaCodec.release();
             mMediaCodec = null;
+        }
+    }
+
+    public void reset() {
+        if (mMediaCodec != null) {
+            mVideoDecoderHandlerThread.quit();
+            mMediaCodec.stop();
         }
     }
 }

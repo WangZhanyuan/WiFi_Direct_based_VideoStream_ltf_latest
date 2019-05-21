@@ -1,220 +1,155 @@
 package com.example.dell.wi_fi_direct_based_videostream_ltf.Coder;
 
-import com.example.dell.wi_fi_direct_based_videostream_ltf.UDP.EchoClient;
 import com.example.dell.wi_fi_direct_based_videostream_ltf.Cache.ServerCache;
 import com.upyun.hardware.SoftEncoder;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
-import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
-import android.media.MediaCodec;
 import android.util.Log;
 
 public class RateAdaptiveEncoder {
     private static final String TAG = "RateAdaptiveEncoder";
-
     private int mWidth;
     private int mHeight;
     private int mFps;
-    private int mBitrate;
     private boolean isPaused;
     private int activeBitrate;
+    private int defaultBitrate;
+    private HashMap<Integer, Encoder_Cache> mHashmap = new HashMap<>();
 
-    private final static int CACHE_BUFFER_SIZE = 8;
-    public final static ArrayBlockingQueue<byte []> mOutputDatasQueue = new ArrayBlockingQueue<byte[]>(CACHE_BUFFER_SIZE);
-    private EchoClient echoClient;
+    public byte[] getSPS_PPS_SEIFromDefaultCache() {
+        if (mHashmap.get(defaultBitrate) != null) {
+            return mHashmap.get(defaultBitrate).serverCache.getThisSPS_PPS_SEI();
+        } else {
+            Log.e(TAG, "getSPS_PPSFromDefaultCache: no default SPS_PPS");
+            return null;
+        }
+    }
 
-    private HashMap<Integer ,SoftEncoder> mEncoderHashmap = new HashMap<>();
-    private int timeStamp = 0;
-//    private ArrayList<SoftEncoder> mEncoderList = new ArrayList<>();
+    //内部类，一个Encoder对应一个ServerCache
+    private class Encoder_Cache {
+        private SoftEncoder softEncoder;
+        private ServerCache serverCache;
+//        private ExecutorService executorService = Executors.newFixedThreadPool(1);
 
-    private ServerCache serverCache = new ServerCache(100, 2000);
+        public Encoder_Cache (int width, int height, int bitrate, int fps, int sCacheSize, int cycleTime, RateAdaptiveEncoder rateAdaptiveEncoder) {
+            this.serverCache = new ServerCache(sCacheSize, cycleTime, bitrate, rateAdaptiveEncoder);
+            this.softEncoder = new SoftEncoder(this.serverCache);
+            initSoftEncoder(this.softEncoder, width, height, bitrate, fps);
+//            Log.d(TAG, "Encoder_Cache: encoder_cache");
+        }
+        
+        public void encode(final byte[] yuvFrame, final int width, final int height, final boolean flip, final int rotate, final long pts) {
+//            executorService.execute(new Runnable() {
+//                @Override
+//                public void run() {
+                    synchronized (Encoder_Cache.class){
+                        softEncoder.NV21SoftEncode(yuvFrame, width, height, false, 90, pts, 0, 0, width, height);
+                    }
+//                }
+//            });
+//            Log.d(TAG, "encode: encode2");
+        }
 
+        public void close() {
+            softEncoder.closeSoftEncoder();
+            Log.d(TAG, "close: close softencoder");
+            serverCache.close();
+            Log.d(TAG, "close: close cache");
+        }
+
+        public void setActive (boolean active) {
+            serverCache.setActive(active);
+//            Log.d(TAG, "setActive: set");
+        }
+
+        public void setNeedSPS_PPS(boolean needSPS_PPS) {
+            this.serverCache.setNeedSPS_PPS(needSPS_PPS);
+        }
+    }
 
     //构造方法,比特率单位为kbps
     public RateAdaptiveEncoder(int width, int height, int bitrate, int fps){
         mWidth = width;
         mHeight = height;
-        mBitrate = bitrate;
         mFps = fps;
-        echoClient = new EchoClient("192.168.49.234");
         isPaused = false;
-        activeBitrate = mBitrate;
-//        mCount = 0;
-
-        mEncoderHashmap.put(mBitrate,new SoftEncoder(this));
-        initSoftEncoder(mEncoderHashmap.get(bitrate),mWidth, mHeight, mBitrate*1000, mFps);
-//        mEncoderList.add(new SoftEncoder(this,++mCount));
-//        initSoftEncoder(mEncoderList.get(0),mWidth, mHeight, mBitrate, mFps);
-        Log.d(TAG,TAG+" initialized!");
+        activeBitrate = bitrate;
+        defaultBitrate = bitrate;
+//        mHashmap.put(500, new Encoder_Cache(width, height, 500, fps, 100, 2000));
+//        mHashmap.put(1000, new Encoder_Cache(width, height, 1000, fps, 100, 2000));
+        mHashmap.put(bitrate, new Encoder_Cache(width, height, bitrate, fps, 100, 2000, this));
+        mHashmap.get(bitrate).setActive(true);
+//        Log.d(TAG, "RateAdaptiveEncoder: init");
     }
 
-    public void initSoftEncoder(SoftEncoder encoder,int width, int height, int bitrate, int fps){
+    private void initSoftEncoder(SoftEncoder encoder,int width, int height, int bitrate, int fps){
         if(encoder != null){
             encoder.setEncoderResolution(width, height);
             encoder.setEncoderFps(fps);
             encoder.setEncoderGop(15);
-            encoder.setEncoderBitrate(bitrate);
+            encoder.setEncoderBitrate(bitrate*1000);
             encoder.setEncoderPreset("veryfast");
             encoder.openSoftEncoder();
             encoder.setInit(true);
-            Log.d(TAG,"SoftEncoder initialized! Bitrate = "+bitrate);
+//            Log.d(TAG, "initSoftEncoder: init");
         }
     }
 
-    public synchronized void encode(byte[] data,long stamp){
+    public void encode(byte[] data,long stamp){
         if (isPaused){
-            Log.d(TAG,"Paused");
+//            Log.d(TAG,"Pause");
             return;
         }
         if (data == null || (data.length != mWidth * mHeight * 3 / 2)) {
-            Log.w(TAG, "Illegal data");
+            Log.w(TAG, "Illegal Data");
             return;
         }
 
-        for (int bitrate : mEncoderHashmap.keySet()){
-            if (bitrate == activeBitrate){
-                Log.d(TAG,"ActiveBitrate is "+bitrate);
-                SoftEncoder activeSoftEncoder = mEncoderHashmap.get(bitrate);
-                if (activeSoftEncoder != null && activeSoftEncoder.isInit()){
-                    //默认竖直方向，旋转90°
-                    activeSoftEncoder.NV21SoftEncode(data, mWidth, mHeight, false, 90, stamp, 0, 0, mWidth, mHeight);
-                }
+        for (int bitrate : mHashmap.keySet()){
+            Encoder_Cache encoder_cache = mHashmap.get(bitrate);
+            if (encoder_cache.softEncoder != null && encoder_cache.softEncoder.isInit()){
+                byte[] yuvFrame = new byte[data.length];
+                long pts = stamp;
+                System.arraycopy(data, 0, yuvFrame, 0, data.length);
+                Log.d(TAG, "encode: 我们一样吗 : "+System.identityHashCode(yuvFrame));
+                encoder_cache.encode(yuvFrame, mWidth, mHeight, false, 90, pts);
             }
         }
-//        mEncoderList.getLast().NV21SoftEncode(data, mWidth, mHeight, false, 90, stamp, 0, 0, mWidth, mHeight);
-//        Iterator<SoftEncoder> iterator = mEncoderList.iterator();
-//        while (iterator.hasNext()) {
-//            SoftEncoder mEncoder = iterator.next();
-//            if(mEncoder != null){
-//                Log.d(TAG, "给" + mEncoder.getmCount() + "号编码器喂数据...");
-//                mEncoder.NV21SoftEncode(data, mWidth, mHeight, false, 90, stamp, 0, 0, mWidth, mHeight);
-//            }
-//        }
-//        //下面这段是能用的hhh
-//        for (int i = 0; i < mCount; i++) {
-//            SoftEncoder mEncoder = mEncoderList.get(i);
-//            if(mEncoder != null && mEncoder.isInit()){
-//                Log.d(TAG, "给" + mEncoder.getmCount() + "号编码器喂数据...");
-//                mEncoder.NV21SoftEncode(data, mWidth, mHeight, false, 90, stamp, 0, 0, mWidth, mHeight);
-//            }
-//        }
-//        for(SoftEncoder mEncoder : mEncoderList){
-//            if(mEncoder != null){
-//                Log.d(TAG, "给" + mEncoder.getmCount() + "号编码器喂数据...");
-//                mEncoder.NV21SoftEncode(data, mWidth, mHeight, false, 90, stamp, 0, 0, mWidth, mHeight);
-//            }
-//        }
+//        Log.d(TAG, "encode: encode1");
     }
 
-    //尝试过关闭编码器，但一直崩溃，出现signal 11错误，怀疑jni写的有问题，干脆不关了
-    public void onEncodedAnnexbFrame(ByteBuffer outputBuffer, MediaCodec.BufferInfo bufferInfo) {
-        serverCache.put(timeStamp++, outputBuffer);
-//        sendByEchoClient(outputBuffer, bufferInfo);
-//        if (count < mCount){
-////            Log.d(TAG,"无脑入队ojbk!"+count);
-////        }
-////        if (count == mCount){
-////            if (this.closeFlag) {
-////                int i = 0;
-////                for (SoftEncoder mEncoder : mEncoderList) {
-////                    if (mEncoder != null && mEncoder.getmCount() != count) {
-////                        mEncoder.closeSoftEncoder();
-////                        Log.d(TAG, "我关闭了" + mEncoder.getmCount() + "号编码器！！");
-////                        mEncoderList.set(i, null);
-////                    }
-////                    i++;
-////                }
-////                this.closeFlag = false;
-////            }
-////            Log.d(TAG,"有脑入队ojbk!"+count);
-////        }
-//
-//
-////        if(count == mCount - 1 && ){
-////            synchronized (RateAdaptiveEncoder.class) {
-////                for (SoftEncoder mEncoder : mEncoderList) {
-////                    if (mEncoder.getmCount() != count) {
-////                        mEncoder.closeSoftEncoder();
-////                        Log.d(TAG,"我关闭了"+mEncoder.getmCount()+"号编码器！！");
-////                    }
-////                }
-////            }
-//////            while(mEncoderList.getFirst().getmCount()!=count){
-//////                mEncoderList.getFirst().closeSoftEncoder();
-//////                 = null;
-//////                mEncoderList.removeFirst();
-//////            }
-////            return;
-////        }
-    }
-
-    public void sendByEchoClient(ByteBuffer outputBuffer, MediaCodec.BufferInfo bufferInfo){
-        if(outputBuffer != null && bufferInfo.size > 0) {
-            byte[] buffer = new byte[outputBuffer.remaining()];
-            outputBuffer.get(buffer);
-            boolean result = mOutputDatasQueue.offer(buffer);
-            byte[] temp = mOutputDatasQueue.poll();
-            if (temp != null) {
-                try {
-                    echoClient.sendStream_n(temp, temp.length);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-                Log.d(TAG, "编码后数据大小："+temp.length);
-            }
-            if (!result) {
-                Log.d(TAG, "Offer to queue failed, queue in full state");
-            }
-        }
-    }
-
+    
     //调整码率，单位kbps
     public void adjustBitrate(int bitrate){
-        if (mEncoderHashmap.get(bitrate) == null){
+        if (mHashmap.get(bitrate) == null){
             isPaused = true;
-            Log.d(TAG,"isPaused");
-            mEncoderHashmap.put(bitrate,new SoftEncoder(this));
-            initSoftEncoder(mEncoderHashmap.get(bitrate), mWidth, mHeight, bitrate*1000, mFps);
-            mEncoderHashmap.put(activeBitrate,null);
+            mHashmap.get(activeBitrate).setActive(false);
+            mHashmap.put(bitrate, new Encoder_Cache(mWidth, mHeight, bitrate, mFps, 100, 2000, this));
+            mHashmap.get(bitrate).setActive(true);
+            mHashmap.get(bitrate).setNeedSPS_PPS(true);
             activeBitrate = bitrate;
             isPaused = false;
-            Log.d(TAG,"play!");
+            Log.d(TAG, "adjustBitrate: adjust");
+        } else {
+            isPaused = true;
+            mHashmap.get(activeBitrate).setActive(false);
+            mHashmap.get(bitrate).setActive(true);
+            mHashmap.get(bitrate).setNeedSPS_PPS(true);
+            activeBitrate = bitrate;
+            isPaused = false;
+            Log.d(TAG, "adjustBitrate: adjust back");
         }
-////        if (mCount){
-////            if (this.closeFlag) {
-//        int i = 0;
-//        for (SoftEncoder mEncoder : mEncoderList) {
-//            if (mEncoder != null) {
-////                mEncoder.closeSoftEncoder();
-//                mEncoderList.set(i, null);
-//                Log.d(TAG, "我关闭了" + mEncoder.getmCount() + "号编码器！！"); //实际上没关只是设为null。。不知为什么一关就出错
-//            }
-//            i++;
-//        }
-////                this.closeFlag = false;
-////            }
-//        Log.d(TAG,"全都关了ojbk!"+mCount);
-//        System.gc();
-//        Log.d(TAG,"gc");
-////        }
-//
-//        mEncoderList.add(new SoftEncoder(this, ++mCount));
-////        this.closeFlag = true;
-//        Log.d(TAG, "添加了编号为" + mCount + "的编码器,但尚未初始化");
-//        mCount++;
     }
 
     public void stop() {
-        for (SoftEncoder mSoftEncoder : mEncoderHashmap.values()){
-            if (mSoftEncoder != null){
-                mSoftEncoder.closeSoftEncoder();
+        for (int bitrate : mHashmap.keySet()){
+            if (mHashmap.get(bitrate) != null){
+                mHashmap.get(bitrate).close();
             }
         }
-        Log.d(TAG,TAG+" stopped!");
+        mHashmap.clear();
     }
 }
