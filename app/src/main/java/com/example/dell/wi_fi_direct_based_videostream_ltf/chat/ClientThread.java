@@ -26,7 +26,7 @@ protected ChatActivity.MyHandler myHandler;
 
 public Socket socket=new Socket();
 private String []type;
-//C
+//
 
     ClientThread(String type[], ChatActivity.MyHandler myHandler){
     this.myHandler=myHandler;
