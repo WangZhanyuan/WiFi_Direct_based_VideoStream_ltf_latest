@@ -1,9 +1,14 @@
 package com.example.dell.wi_fi_direct_based_videostream_ltf.Cache;
 
+import com.example.dell.wi_fi_direct_based_videostream_ltf.Algorithmic.ComputeBandwidth;
 import com.example.dell.wi_fi_direct_based_videostream_ltf.Coder.RateAdaptiveEncoder;
 import com.example.dell.wi_fi_direct_based_videostream_ltf.UDP.EchoClient;
+import com.example.dell.wi_fi_direct_based_videostream_ltf.wifi_direct.WiFiDirectActivity;
 
+import android.net.TrafficStats;
+import android.net.wifi.WifiInfo;
 import android.os.CountDownTimer;
+import android.renderscript.ScriptIntrinsicYuvToRGB;
 import android.util.Log;
 
 import java.io.IOException;
@@ -24,8 +29,8 @@ public class ServerCache {
     private byte[] sei;
     private RateAdaptiveEncoder rateAdaptiveEncoder;
     private ConcurrentHashMap<Integer, byte[]> sCache = new ConcurrentHashMap<>();//神奇嗷，ConcurrentHashMap就好用了嗷
-    private EchoClient client = new EchoClient("192.168.49.234");
-
+    private EchoClient client = new EchoClient("192.168.49.1");
+    private static long totalsize;
     //倒计时类，间隔countDownInterval调用onTick方法，计时cycleTime/countDownInterval秒后调用onFinish方法
     private CountDownTimer countDownTimer ;
 
@@ -141,7 +146,8 @@ public class ServerCache {
         }
     }
 
-
+/*
+* 判断是否为I帧*/
     private boolean isIDRFrame (byte[] data) {
         for (int i = 0;;i++){
             if (data[i] == 0x00 && data[i + 1] == 0x00 && data[i + 2] == 0x01) {
@@ -198,9 +204,14 @@ public class ServerCache {
         byte[] message = generateUDPMessage(stamp, data);
         try {
             client.sendStream_n(message, message.length);
-            Log.d(TAG, "sendByEchoClient: let me see the udp message : "+Arrays.toString(message));
+//            synchronized(WiFiDirectActivity.dataSize) {
+//                WiFiDirectActivity.dataSize+=message.length;
+//            }
+//
+//            Log.d(TAG, "sendByEchoClient: let me see the udp message : "+Arrays.toString(message));
 //                Log.d(TAG, "sendByEchoClient: data length : "+data.length);
 //                Log.d(TAG, "sendByEchoClient: bitrate : "+mBitrate);
+
         } catch (IOException e) {
             e.printStackTrace();
         }

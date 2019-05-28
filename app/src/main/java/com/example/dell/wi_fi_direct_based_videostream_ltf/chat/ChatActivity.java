@@ -18,6 +18,7 @@ import android.media.MediaRecorder;
 import android.media.projection.MediaProjection;
 import android.media.projection.MediaProjectionManager;
 import android.net.Uri;
+import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.net.wifi.p2p.WifiP2pInfo;
 import android.net.wifi.p2p.WifiP2pManager;
@@ -42,12 +43,15 @@ import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.example.dell.wi_fi_direct_based_videostream_ltf.Algorithmic.ParametersCollection;
 import com.example.dell.wi_fi_direct_based_videostream_ltf.Camera.CameraActivity;
 import com.example.dell.wi_fi_direct_based_videostream_ltf.Camera.Decoder;
 import com.example.dell.wi_fi_direct_based_videostream_ltf.R;
 import com.example.dell.wi_fi_direct_based_videostream_ltf.Service.ServerAsyncTask;
 import com.example.dell.wi_fi_direct_based_videostream_ltf.Service.ClientAsynTask;
 import com.example.dell.wi_fi_direct_based_videostream_ltf.recorder.RecordService;
+import com.example.dell.wi_fi_direct_based_videostream_ltf.wifi_direct.DeviceDetailFragment;
+import com.example.dell.wi_fi_direct_based_videostream_ltf.wifi_direct.WiFiDirectActivity;
 
 import java.io.IOException;
 import java.io.OutputStreamWriter;
@@ -124,12 +128,19 @@ public class ChatActivity extends AppCompatActivity {
         Intent intent1=getIntent();
         isgroupowner=intent1.getBooleanExtra("ChatActivity",false);
         wifiP2pManager=(WifiP2pManager) getSystemService(Context.WIFI_P2P_SERVICE);
-        WifiManager wifiManager=(WifiManager)getApplicationContext().getSystemService(Context.WIFI_SERVICE);
-         textView=(TextView) findViewById(R.id.chat_content);
+        //WifiManager wifiManager=(WifiManager)getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+
+        //wifiP2pManager.requestGroupInfo(new WifiP2pManager.Channel()
+
+        textView=(TextView) findViewById(R.id.chat_content);
         editText=(EditText)findViewById(R.id.Sendtext);
 
         final ServerAsyncTask serverAsyncTask=new ServerAsyncTask(textView);
         final ClientAsynTask clientAsynTask=new ClientAsynTask("192.168.49.1");
+
+
+
+
         /**
          * 利用AsynTask实现socket连接，
          *    if (isgroupowner){
@@ -227,7 +238,7 @@ public class ChatActivity extends AppCompatActivity {
                         startBtn.setText(R.string.start_record);
                     } else {
                         Intent captureIntent = projectionManager.createScreenCaptureIntent();
-                        /**
+                        /*
                          * 用该方法启动活动，可以将结果返回到OnActivityResult()方法中
                          */
                         startActivityForResult(captureIntent, RECORD_REQUEST_CODE);

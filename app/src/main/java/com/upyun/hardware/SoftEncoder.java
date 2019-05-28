@@ -57,9 +57,9 @@ public class SoftEncoder {
 //        }
 
         if (serverCache != null) {
-            Log.d(TAG, "onSoftEncodedData: who am i ? "+serverCache.getmBitrate());
-            Log.d(TAG, "onSoftEncodedData: my thread : "+android.os.Process.myTid());
-            Log.d(TAG, "onSoftEncodedData: my address : "+System.identityHashCode(this));
+//            Log.d(TAG, "onSoftEncodedData: who am i ? "+serverCache.getmBitrate());
+//            Log.d(TAG, "onSoftEncodedData: my thread : "+android.os.Process.myTid());
+//            Log.d(TAG, "onSoftEncodedData: my address : "+System.identityHashCode(this));
             serverCache.put(es);
         }
     }

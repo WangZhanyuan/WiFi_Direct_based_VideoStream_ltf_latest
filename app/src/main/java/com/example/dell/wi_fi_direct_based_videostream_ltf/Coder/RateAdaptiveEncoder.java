@@ -4,6 +4,7 @@ import com.example.dell.wi_fi_direct_based_videostream_ltf.Cache.ServerCache;
 import com.upyun.hardware.SoftEncoder;
 
 import java.util.HashMap;
+import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -80,8 +81,9 @@ public class RateAdaptiveEncoder {
         defaultBitrate = bitrate;
 //        mHashmap.put(500, new Encoder_Cache(width, height, 500, fps, 100, 2000));
 //        mHashmap.put(1000, new Encoder_Cache(width, height, 1000, fps, 100, 2000));
-        mHashmap.put(bitrate, new Encoder_Cache(width, height, bitrate, fps, 100, 2000, this));
-        mHashmap.get(bitrate).setActive(true);
+        mHashmap.put(bitrate, new Encoder_Cache(width, height, bitrate, fps, 60, 2000, this));
+
+        Objects.requireNonNull(mHashmap.get(bitrate)).setActive(true);
 //        Log.d(TAG, "RateAdaptiveEncoder: init");
     }
 
@@ -98,6 +100,9 @@ public class RateAdaptiveEncoder {
         }
     }
 
+    /*
+    * 编码
+    * */
     public void encode(byte[] data,long stamp){
         if (isPaused){
 //            Log.d(TAG,"Pause");
@@ -114,7 +119,7 @@ public class RateAdaptiveEncoder {
                 byte[] yuvFrame = new byte[data.length];
                 long pts = stamp;
                 System.arraycopy(data, 0, yuvFrame, 0, data.length);
-                Log.d(TAG, "encode: 我们一样吗 : "+System.identityHashCode(yuvFrame));
+//                Log.d(TAG, "encode: 我们一样吗 : "+System.identityHashCode(yuvFrame));
                 encoder_cache.encode(yuvFrame, mWidth, mHeight, false, 90, pts);
             }
         }
@@ -124,24 +129,25 @@ public class RateAdaptiveEncoder {
     
     //调整码率，单位kbps
     public void adjustBitrate(int bitrate){
-        if (mHashmap.get(bitrate) == null){
-            isPaused = true;
-            mHashmap.get(activeBitrate).setActive(false);
-            mHashmap.put(bitrate, new Encoder_Cache(mWidth, mHeight, bitrate, mFps, 100, 2000, this));
-            mHashmap.get(bitrate).setActive(true);
-            mHashmap.get(bitrate).setNeedSPS_PPS(true);
-            activeBitrate = bitrate;
-            isPaused = false;
-            Log.d(TAG, "adjustBitrate: adjust");
-        } else {
-            isPaused = true;
-            mHashmap.get(activeBitrate).setActive(false);
-            mHashmap.get(bitrate).setActive(true);
-            mHashmap.get(bitrate).setNeedSPS_PPS(true);
-            activeBitrate = bitrate;
-            isPaused = false;
-            Log.d(TAG, "adjustBitrate: adjust back");
-        }
+            if (mHashmap.get(bitrate) == null) {
+                isPaused = true;
+                mHashmap.get(activeBitrate).setActive(false);
+                mHashmap.put(bitrate, new Encoder_Cache(mWidth, mHeight, bitrate, mFps, 100, 2000, this));
+                mHashmap.get(bitrate).setActive(true);
+                mHashmap.get(bitrate).setNeedSPS_PPS(true);
+                activeBitrate = bitrate;
+                isPaused = false;
+                Log.d(TAG, "adjustBitrate: adjust");
+            } else {
+                isPaused = true;
+                mHashmap.get(activeBitrate).setActive(false);
+                mHashmap.get(bitrate).setActive(true);
+                mHashmap.get(bitrate).setNeedSPS_PPS(true);
+                activeBitrate = bitrate;
+                isPaused = false;
+                Log.d(TAG, "adjustBitrate: adjust back");
+            }
+
     }
 
     public void stop() {

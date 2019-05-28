@@ -1,5 +1,6 @@
 package com.example.dell.wi_fi_direct_based_videostream_ltf.wifi_direct;
 
+import android.annotation.SuppressLint;
 import android.app.Fragment;
 import android.app.ProgressDialog;
 import android.content.DialogInterface;
@@ -7,6 +8,7 @@ import android.content.Intent;
 import android.net.wifi.WpsInfo;
 import android.net.wifi.p2p.WifiP2pConfig;
 import android.net.wifi.p2p.WifiP2pDevice;
+import android.net.wifi.p2p.WifiP2pGroup;
 import android.net.wifi.p2p.WifiP2pInfo;
 import android.net.wifi.p2p.WifiP2pManager;
 import android.os.Bundle;
@@ -16,19 +18,27 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
+import com.example.dell.wi_fi_direct_based_videostream_ltf.Algorithmic.ComputeBandwidth;
 import com.example.dell.wi_fi_direct_based_videostream_ltf.R;
 import com.example.dell.wi_fi_direct_based_videostream_ltf.chat.ChatActivity;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.Timer;
+import java.util.concurrent.TimeoutException;
 
-public class DeviceDetailFragment extends Fragment implements WifiP2pManager.ConnectionInfoListener {
+public class DeviceDetailFragment extends Fragment implements WifiP2pManager.ConnectionInfoListener,WifiP2pManager.GroupInfoListener {
     private static final String TAG=DeviceDetailFragment.class.getSimpleName();
     protected static final int CHOOSE_FILE_RESULT_CODE = 20;
     private View mContentView = null;
     private WifiP2pDevice device;
     public static WifiP2pInfo info;
     ProgressDialog progressDialog = null;
+    private Timer timer = new Timer();
+    private ComputeBandwidth computeBandwidth = new ComputeBandwidth();
+
+
+
     @Override
     public void onActivityCreated(Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
@@ -93,15 +103,21 @@ public class DeviceDetailFragment extends Fragment implements WifiP2pManager.Con
         return mContentView;
     }
 
+    @SuppressLint("SetTextI18n")
     public void showDetails(WifiP2pDevice device) {
         this.device = device;
         this.getView().setVisibility(View.VISIBLE);
         TextView view = (TextView) mContentView.findViewById(R.id.device_address);
-        view.setText("DeviceMacAddress:"+device.deviceAddress);
-        view = (TextView) mContentView.findViewById(R.id.device_info);
         view.setText(device.toString());
 
+//        TextView view_device_name = (TextView) mContentView.findViewById(R.id.device_info);
+//        view_device_name.setText("Device Name"+device.deviceName);
 
+//        TextView view_is_group_owner=(TextView)mContentView.findViewById(R.id.group_owner);
+//        view_is_group_owner.setText(device.isGroupOwner()?"Is group owner: yes":"Is group owner: no");
+
+//        TextView view_device_all_info=(TextView)mContentView.findViewById(R.id.group_owner);
+//        view_device_all_info.setText(device.toString());
     }
     /**
      * Clears the UI fields after a disconnect or direct mode disable operation.
@@ -120,12 +136,37 @@ public class DeviceDetailFragment extends Fragment implements WifiP2pManager.Con
         this.getView().setVisibility(View.GONE);
     }
 
+    @Override
      public void onConnectionInfoAvailable(final WifiP2pInfo info){
          if (progressDialog != null && progressDialog.isShowing()) {
              progressDialog.dismiss();
          }
          this.info = info;
          this.getView().setVisibility(View.VISIBLE);
+
      }
 
+    @Override
+    public void onGroupInfoAvailable(WifiP2pGroup group) {
+
+        String ssid =group.getNetworkName();
+
+        ((WiFiDirectActivity)getActivity()).setSSID(ssid);
+
+    }
+    public ComputeBandwidth getComputeBandwidth() {
+        return computeBandwidth;
+    }
+
+    public Timer getTimer() {
+        return timer;
+    }
+
+    public void setTimer(Timer timer) {
+        this.timer = timer;
+    }
+
+    public void setComputeBandwidth(ComputeBandwidth computeBandwidth) {
+        this.computeBandwidth = computeBandwidth;
+    }
 }

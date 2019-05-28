@@ -3,10 +3,15 @@ package com.example.dell.wi_fi_direct_based_videostream_ltf.wifi_direct;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.IntentFilter;
+import android.net.wifi.ScanResult;
+import android.net.wifi.WifiManager;
 import android.net.wifi.p2p.WifiP2pConfig;
 import android.net.wifi.p2p.WifiP2pDevice;
 import android.net.wifi.p2p.WifiP2pGroup;
+import android.net.wifi.p2p.WifiP2pInfo;
 import android.net.wifi.p2p.WifiP2pManager;
+import android.os.Build;
+import android.support.annotation.RequiresApi;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -17,10 +22,14 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.Toast;
 
+import com.example.dell.wi_fi_direct_based_videostream_ltf.Algorithmic.ParametersCollection;
 import com.example.dell.wi_fi_direct_based_videostream_ltf.R;
 
+import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * An activity that uses WiFi Direct APIs to discover and connect with available
@@ -40,6 +49,8 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
     private final IntentFilter intentFilter = new IntentFilter();
     private WifiP2pManager.Channel channel;
     private BroadcastReceiver receiver = null;
+    private String ssid="";
+    public static Long dataSize = Long.valueOf(0);
 
     /**
      * @param isWifiP2pEnabled the isWifiP2pEnabled to set
@@ -63,6 +74,7 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
         intentFilter.addAction(WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION);//用于通知P2P的连接情况
         intentFilter.addAction(WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION);//用于通知本机设备信息变化情况
 
+
         manager = (WifiP2pManager) getSystemService(Context.WIFI_P2P_SERVICE);
         channel = manager.initialize(this, getMainLooper(), null);
 
@@ -79,6 +91,7 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
         });
 
 
+
     }
 
     /** register the BroadcastReceiver with the intent values to be matched */
@@ -87,6 +100,8 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
         super.onResume();
         receiver = new WiFiDirectBroadcastReceiver(manager, channel, this);
         registerReceiver(receiver, intentFilter);
+
+
     }
 
     @Override
@@ -185,8 +200,7 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
 
     @Override
     public void showDetails(WifiP2pDevice device) {//这是DeviceActionListener接口中的一个方法
-        DeviceDetailFragment fragment = (DeviceDetailFragment) getFragmentManager()
-                .findFragmentById(R.id.frag_detail);
+        DeviceDetailFragment fragment = (DeviceDetailFragment) getFragmentManager().findFragmentById(R.id.frag_detail);
         fragment.showDetails(device);
 
     }
@@ -292,5 +306,52 @@ public class WiFiDirectActivity extends AppCompatActivity implements WifiP2pMana
         }
 
     }
+    /*
+    * 获取RSSI*/
+    @RequiresApi(api = Build.VERSION_CODES.M)
+    public int getRSSI(String regrex)  {
+        int rssi = -1000;
+        if(!("").equals(regrex)){
 
+            WifiManager wifiManager = (WifiManager)getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+            wifiManager.startScan();
+            List<ScanResult> scanResults = wifiManager.getScanResults();
+            Pattern pattern = Pattern.compile(regrex);
+            //Log.d(WiFiDirectActivity.TAG,""+scanResults.size());
+
+            if(null != pattern){
+                for(ScanResult scanResult : scanResults){
+
+                    Matcher matcher = pattern.matcher(scanResult.SSID);
+                    if(matcher.matches()){
+
+               /* Log.d(WiFiDirectActivity.TAG, scanResult.BSSID);
+                Log.d(WiFiDirectActivity.TAG, ""+scanResult.level);*/
+                        rssi = scanResult.level;
+
+                    }
+                }
+            }
+        }
+
+        return rssi;
+    }
+    /*
+    * 获取带宽值
+    * */
+//    public double getBandwidth(float maxBandwidth){
+//        double availableBandwidth = 0;
+//        DeviceDetailFragment deviceDetailFragment = (DeviceDetailFragment)getFragmentManager().findFragmentById(R.id.frag_detail);
+//        Double bandwidth = deviceDetailFragment.getComputeBandwidth().getBandwidth();
+//        availableBandwidth = (maxBandwidth - bandwidth)/maxBandwidth;
+//        return availableBandwidth;
+//    }
+
+    public void setSSID(String ssid){
+        this.ssid=ssid;
+
+    }
+    public String getSSID(){
+        return ssid;
+    }
 }

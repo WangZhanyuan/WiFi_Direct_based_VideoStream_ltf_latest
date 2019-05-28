@@ -34,7 +34,9 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 
+import com.example.dell.wi_fi_direct_based_videostream_ltf.Algorithmic.ComputeBandwidth;
 import com.example.dell.wi_fi_direct_based_videostream_ltf.Coder.AsyncEncoder;
+import com.example.dell.wi_fi_direct_based_videostream_ltf.Coder.MyEncoder;
 import com.example.dell.wi_fi_direct_based_videostream_ltf.Coder.RateAdaptiveEncoder;
 import com.example.dell.wi_fi_direct_based_videostream_ltf.Coder.Synchronization.Decoder;
 import com.example.dell.wi_fi_direct_based_videostream_ltf.Coder.Synchronization.Encoder;
@@ -98,6 +100,7 @@ public class CameraActivity extends AppCompatActivity implements Camera.PreviewC
     private int width;
     private int height;
     private byte[] mYuvFrameBuffer;
+    private ComputeBandwidth computeBandwidth=new ComputeBandwidth();
 
     public CameraActivity() throws IOException {
     }
@@ -116,7 +119,7 @@ public class CameraActivity extends AppCompatActivity implements Camera.PreviewC
 
         rateAdaptiveEncoder = new RateAdaptiveEncoder(640,480,Integer.parseInt(mBitrate.getText().toString()),30);
 
-        pill.setOnClickListener(new View.OnClickListener() {
+        pill.setOnClickListener(new View.OnClickListener() {//解码
             @RequiresApi(api = Build.VERSION_CODES.M)
             @Override
             public void onClick(View v) {
@@ -179,6 +182,42 @@ public class CameraActivity extends AppCompatActivity implements Camera.PreviewC
         mSurfaceHolder2.addCallback(mSurfaceHolderCallback1);
 
         Log.d(TAG, "onResume: onResume 执行了");
+
+        /*
+        * 计算实时网速
+        * */
+        new Thread(computeBandwidth).start();
+    }
+
+
+
+    @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (mCameraCaptureSession != null) {
+            mCameraCaptureSession.close();
+            mCameraCaptureSession = null;
+        }
+        if (mCameraDevice != null) {
+            mCameraDevice.close();
+            mCameraDevice = null;
+        }
+        if(mCamera != null){
+            stopCamera();
+        }
+
+    }
+    @Override
+    protected void onStop() {
+        super.onStop();
+
+        computeBandwidth.setstatus(false);
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
     }
 
     private void initCameraThread() {
@@ -448,23 +487,7 @@ public class CameraActivity extends AppCompatActivity implements Camera.PreviewC
         }
     };
 
-    @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
-    @Override
-    protected void onPause() {
-        super.onPause();
-        if (mCameraCaptureSession != null) {
-            mCameraCaptureSession.close();
-            mCameraCaptureSession = null;
-        }
-        if (mCameraDevice != null) {
-            mCameraDevice.close();
-            mCameraDevice = null;
-        }
-        if(mCamera != null){
-            stopCamera();
-        }
 
-    }
     /**
      * Mediacodec编码部分
      */
