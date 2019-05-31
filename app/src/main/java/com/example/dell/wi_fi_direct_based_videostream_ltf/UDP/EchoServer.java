@@ -49,7 +49,7 @@ public class EchoServer implements Runnable {
         }
         running=true;
         while (running){
-             packet=new DatagramPacket(buf,buf.length);
+            packet=new DatagramPacket(buf,buf.length);
             try {
                 socket.receive(packet);
 //                multicastClient.sendmessage(packet.getData(),packet.getLength());
@@ -59,8 +59,9 @@ public class EchoServer implements Runnable {
                 Log.d(TAG, " "+packet_number+"runEchoServer: "+Arrays.toString(packet.getData()));
 //                echoClient_multist.sendStream_n(packet.getData(),packet.getData().length);
                 byte[]temp=new byte[packet.getLength()];
-                System.arraycopy(packet.getData(),0,temp,0,(packet.getLength()-4));
+                System.arraycopy(packet.getData(),0,temp,0,packet.getLength());
                 mInputDataQueue.offer(temp);
+//                Log.d(TAG, "run: "+mInputDataQueue.size());
                 //测试丢包专用
 //                    Log.d(TAG, "run: 接收到了"+packet_number);
 //                Log.d(TAG, "run: "+temp.length+"长"+Arrays.toString(mInputDataQueue.poll()));
@@ -88,6 +89,7 @@ public class EchoServer implements Runnable {
         Looper.loop();
     }
     public byte[] pollFramedata(){
+//        Log.d(TAG, "pollFramedata: "+mInputDataQueue.size());
             return mInputDataQueue.poll();
     }
 

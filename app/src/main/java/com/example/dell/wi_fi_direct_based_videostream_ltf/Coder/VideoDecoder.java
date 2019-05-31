@@ -24,7 +24,7 @@ import java.util.Arrays;
  * Created by zj on 2018/7/29 0029.
  */
 public class VideoDecoder {
-    private final static String TAG = "VideoEncoder";
+    private final static String TAG = "VideoDecoder";
     private final static int CONFIGURE_FLAG_DECODE = 0;
 
     private MediaCodec  mMediaCodec;
@@ -50,6 +50,7 @@ public class VideoDecoder {
 //            if(true) {
 //                dataSources = mVideoEncoder.pollFrameFromEncoder();
             byte[] tempData = echoServer.pollFramedata();
+            Log.d(TAG, "onInputBufferAvailable: 我从echoserver拿到数据了吗？"+Arrays.toString(tempData));
             if (tempData != null) {
                 byte[] data = new byte[tempData.length-4];
                 System.arraycopy(tempData, 4, data , 0, tempData.length - 4);
@@ -69,6 +70,7 @@ public class VideoDecoder {
 //                Log.d(TAG, "onInputBufferAvailable:接收到了 "+number);
             }
             mediaCodec.queueInputBuffer(id,0, length,System.nanoTime()/1000,0);
+//            Log.d(TAG, "onInputBufferAvailable: let me see input buffer : "+Arrays.toString(dataSources));
         }
 
         @Override
@@ -119,10 +121,10 @@ public class VideoDecoder {
 
         mMediaFormat = MediaFormat.createVideoFormat(mimeType, mViewWidth, mViewHeight);
         mMediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Flexible);
-        mMediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, 2500 * 1000);
+        mMediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, 1920*1080);
         mMediaFormat.setInteger(MediaFormat.KEY_FRAME_RATE, 30);
-        mMediaFormat.setInteger(MediaFormat.KEY_MAX_INPUT_SIZE,mViewWidth * mViewHeight);
-        mMediaFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 2);
+        mMediaFormat.setInteger(MediaFormat.KEY_MAX_INPUT_SIZE,16*32);
+        mMediaFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1);
         try {
 //            mMediaFormat.setByteBuffer("csd-0", ByteBuffer.wrap(sps));
 //            mMediaFormat.setByteBuffer("csd-1", ByteBuffer.wrap(pps));
